@@ -1,4 +1,5 @@
 import json, os, tempfile, unittest
+import unittest.mock
 import star_history as sh
 
 
@@ -42,6 +43,28 @@ class TestHistory(unittest.TestCase):
             path = os.path.join(d, "history.json")
             sh.save_history({"repo": "o/r", "points": []}, path)
             self.assertEqual(os.listdir(d), ["history.json"])
+
+
+class TestResolveRepo(unittest.TestCase):
+    def test_explicit_flag_wins(self):
+        self.assertEqual(sh.resolve_repo("owner/name"), "owner/name")
+
+    def test_falls_back_to_env(self):
+        with unittest.mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": "o/r"}):
+            self.assertEqual(sh.resolve_repo(None), "o/r")
+
+    def test_parses_ssh_remote(self):
+        self.assertEqual(sh.parse_remote("git@github.com:Ovid/star-history.git"),
+                         "Ovid/star-history")
+
+    def test_parses_https_remote(self):
+        self.assertEqual(sh.parse_remote("https://github.com/Ovid/star-history"),
+                         "Ovid/star-history")
+
+    def test_rejects_slug_that_could_break_out_of_svg(self):
+        for bad in ('a"/b', "a/b<script>", "noslash", "a/b/c", ""):
+            with self.assertRaises(SystemExit):
+                sh.validate_slug(bad)
 
 
 if __name__ == "__main__":

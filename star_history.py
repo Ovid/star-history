@@ -5,9 +5,13 @@ Standard library only. See docs/plans/2026-07-25-star-history-design.md.
 """
 import json
 import os
+import re
+import subprocess
+import sys
 
 DATA_DIR = ".github/star-history"
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
+SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
 
 
 def load_history(path=HISTORY_PATH):
@@ -39,3 +43,33 @@ def add_point(state, day, stars, src="snapshot"):
     points.append({"date": day, "stars": stars, "src": src})
     points.sort(key=lambda p: p["date"])
     state["points"] = points
+
+
+def validate_slug(slug):
+    """The one trust boundary: the slug is interpolated straight into the SVG."""
+    if not SLUG_RE.match(slug or ""):
+        sys.exit(f"not a valid OWNER/NAME repository slug: {slug!r}")
+    return slug
+
+
+def parse_remote(url):
+    match = re.search(r"[:/]([A-Za-z0-9._-]+/[A-Za-z0-9._-]+?)(?:\.git)?/?$", url)
+    return match.group(1) if match else None
+
+
+def resolve_repo(explicit=None):
+    """--repo flag, then $GITHUB_REPOSITORY, then the origin remote."""
+    if explicit:
+        return validate_slug(explicit)
+    env = os.environ.get("GITHUB_REPOSITORY")
+    if env:
+        return validate_slug(env)
+    try:
+        url = subprocess.run(["git", "remote", "get-url", "origin"],
+                             capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        url = ""
+    slug = parse_remote(url)
+    if not slug:
+        sys.exit("cannot determine the repository; pass --repo OWNER/NAME")
+    return validate_slug(slug)
