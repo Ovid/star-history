@@ -78,5 +78,61 @@ class TestNiceStep(unittest.TestCase):
         self.assertEqual(sh.nice_step(1), 1)
 
 
+ONE = {"repo": "Ovid/star-history",
+       "points": [{"date": "2026-07-25", "stars": 1, "src": "snapshot"}]}
+
+MIXED = {"repo": "Ovid/star-history", "points": [
+    {"date": "2019-01-01", "stars": 1, "src": "backfill"},
+    {"date": "2019-06-01", "stars": 40, "src": "backfill"},
+    {"date": "2026-07-24", "stars": 3000, "src": "snapshot"},
+    {"date": "2026-07-25", "stars": 3011, "src": "snapshot"},
+]}
+
+
+class TestRender(unittest.TestCase):
+    def test_is_deterministic(self):
+        """Same input, same bytes — otherwise CI commits a diff every day."""
+        self.assertEqual(sh.render(MIXED, "light"), sh.render(MIXED, "light"))
+
+    def test_themes_differ(self):
+        self.assertNotEqual(sh.render(MIXED, "light"), sh.render(MIXED, "dark"))
+
+    def test_single_point_history_renders(self):
+        """A one-point history must not divide by zero or emit an empty chart."""
+        svg = sh.render(ONE, "light")
+        self.assertIn("<circle", svg)
+        self.assertIn("</svg>", svg)
+
+    def test_backfill_segment_is_dashed_and_snapshot_is_not(self):
+        svg = sh.render(MIXED, "light")
+        self.assertIn("stroke-dasharray", svg)
+        self.assertIn("reconstructed", svg)
+
+    def test_pure_snapshot_history_has_no_dashes(self):
+        svg = sh.render({"repo": "o/r", "points": [
+            {"date": "2026-07-24", "stars": 1, "src": "snapshot"},
+            {"date": "2026-07-25", "stars": 2, "src": "snapshot"}]}, "light")
+        self.assertNotIn("stroke-dasharray", svg)
+
+    def test_contains_attribution_and_no_active_content(self):
+        svg = sh.render(MIXED, "dark")
+        self.assertIn("github.com/Ovid/star-history", svg)
+        for forbidden in ("<script", "foreignObject", "onload", "xlink:href"):
+            self.assertNotIn(forbidden, svg)
+        # The SVG namespace is the one unavoidable absolute URL; nothing is fetched.
+        self.assertIn('xmlns="http://www.w3.org/2000/svg"', svg)
+        self.assertEqual(svg.count("http://"), 1)
+
+    def test_x_labels_are_not_repeated(self):
+        """Two points in one month must not stack identical labels on one tick."""
+        svg = sh.render(MIXED, "light")
+        self.assertEqual(svg.count(">Jul 2026<"), 1)
+
+    def test_light_has_opaque_background_and_dark_does_not(self):
+        """Light must stay legible where <picture> is stripped."""
+        self.assertIn('<rect width="800" height="400" fill="#ffffff"', sh.render(MIXED, "light"))
+        self.assertNotIn("<rect width=\"800\"", sh.render(MIXED, "dark"))
+
+
 if __name__ == "__main__":
     unittest.main()
