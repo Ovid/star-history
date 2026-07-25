@@ -123,6 +123,21 @@ class TestRender(unittest.TestCase):
         self.assertIn('xmlns="http://www.w3.org/2000/svg"', svg)
         self.assertEqual(svg.count("http://"), 1)
 
+    def test_x_labels_do_not_crowd_each_other(self):
+        """A daily history's last label used to land 10px from its neighbour."""
+        import datetime, re as _re
+        start = datetime.date(2026, 3, 16).toordinal()
+        # Real star data clusters: sparse for months, then several days in a row.
+        days = [start + 5 * i for i in range(26)] + [start + 128 + i for i in range(4)]
+        clustered = {"repo": "o/r", "points": [
+            {"date": datetime.date.fromordinal(d).isoformat(),
+             "stars": i + 1, "src": "snapshot"} for i, d in enumerate(days)]}
+        xs = [int(x) for x in _re.findall(r'<text x="(\d+)" y="370"',
+                                          sh.render(clustered, "light"))]
+        self.assertGreater(len(xs), 2)
+        for left, right in zip(sorted(xs), sorted(xs)[1:]):
+            self.assertGreaterEqual(right - left, 60, f"labels collide at {xs}")
+
     def test_x_labels_are_not_repeated(self):
         """Two points in one month must not stack identical labels on one tick."""
         svg = sh.render(MIXED, "light")

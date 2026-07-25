@@ -182,9 +182,15 @@ def render(state, theme):
                    f'fill="{colors["muted"]}">{value:,}</text>')
         value += step
 
-    for point, text in _label_dates(points):
+    placed = []
+    # Right to left, so the final date always gets its label and any neighbour
+    # too close to it is the one dropped.
+    for point, text in reversed(_label_dates(points)):
         # Centered text at the plot edge would clip; keep it inside the canvas.
         x = min(max(sx(date.fromisoformat(point["date"]).toordinal()), 32), WIDTH - 32)
+        if placed and placed[-1] - x < 60:
+            continue
+        placed.append(x)
         out.append(f'<text x="{x}" y="{PAD_T + PLOT_H + 20}" text-anchor="middle" '
                    f'font-family="{FONT}" font-size="12" '
                    f'fill="{colors["muted"]}">{text}</text>')
