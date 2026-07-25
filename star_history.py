@@ -9,11 +9,17 @@ import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from datetime import date
 
 DATA_DIR = ".github/star-history"
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 SLUG_RE = re.compile(r"[A-Za-z0-9._-]+/[A-Za-z0-9._-]+")
+
+TIMEOUT_SECONDS = 20
+MAX_RESPONSE_BYTES = 1_000_000
+API_ROOT = "https://api.github.com"
 
 WIDTH, HEIGHT = 800, 400
 PAD_L, PAD_R, PAD_T, PAD_B = 60, 20, 30, 50
@@ -206,3 +212,29 @@ def render_all(state, data_dir=DATA_DIR):
     for theme in ("light", "dark"):
         with open(os.path.join(data_dir, f"{theme}.svg"), "w", encoding="utf-8") as handle:
             handle.write(render(state, theme))
+
+
+def http_json(url, token=None, data=None, accept="application/vnd.github+json"):
+    """One bounded, timed HTTP call. Any failure is fatal by design: a bad
+    response must never be recorded as a data point."""
+    headers = {"Accept": accept, "User-Agent": "star-history"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    body = json.dumps(data).encode() if data is not None else None
+    if body:
+        headers["Content-Type"] = "application/json"
+    request = urllib.request.Request(url, data=body, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+            return json.loads(response.read(MAX_RESPONSE_BYTES))
+    except urllib.error.HTTPError as error:
+        sys.exit(f"GitHub returned HTTP {error.code} for {url}")
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+        sys.exit(f"could not reach GitHub: {error}")
+
+
+def fetch_star_count(repo, token=None):
+    payload = http_json(f"{API_ROOT}/repos/{repo}", token)
+    if "stargazers_count" not in payload:
+        sys.exit(f"no stargazers_count in the API response for {repo}")
+    return int(payload["stargazers_count"])

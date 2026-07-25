@@ -134,5 +134,17 @@ class TestRender(unittest.TestCase):
         self.assertNotIn("<rect width=\"800\"", sh.render(MIXED, "dark"))
 
 
+class TestFetch(unittest.TestCase):
+    def test_extracts_star_count(self):
+        with unittest.mock.patch.object(sh, "http_json",
+                                        return_value={"stargazers_count": 42}):
+            self.assertEqual(sh.fetch_star_count("o/r"), 42)
+
+    def test_missing_field_raises_rather_than_recording_garbage(self):
+        with unittest.mock.patch.object(sh, "http_json", return_value={}):
+            with self.assertRaises(SystemExit):
+                sh.fetch_star_count("o/r")
+
+
 if __name__ == "__main__":
     unittest.main()
