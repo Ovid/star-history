@@ -29,6 +29,22 @@ See [what the chart means](#what-the-chart-means-and-what-it-doesnt).
    waiting for tomorrow's cron.
 3. Run `python3 star_history.py snippet` and paste the output into your README.
 
+Two files, and only those two:
+
+```
+star_history.py                        ← copy this
+.github/workflows/star-history.yml     ← and this, at exactly this path
+.github/star-history/                  ← don't copy: the tool creates it
+    history.json                          your record of measurements
+    light.svg  dark.svg                   redrawn on every run
+```
+
+Don't copy this repository's `.github/star-history/` directory. Its
+`history.json` names *this* repo and carries *this* repo's points, and a slug
+mismatch is treated as a rename — the count is relabelled and the existing
+points are kept, by design, so a renamed repo doesn't lose its history. Copy the
+directory and your chart silently starts out containing ours.
+
 Nothing to install, no dependencies, no build step. One file of Python 3.12
 standard library.
 
