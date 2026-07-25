@@ -97,11 +97,46 @@ class TestRender(unittest.TestCase):
     def test_themes_differ(self):
         self.assertNotEqual(sh.render(MIXED, "light"), sh.render(MIXED, "dark"))
 
-    def test_single_point_history_renders(self):
-        """A one-point history must not divide by zero or emit an empty chart."""
+    def test_single_point_history_renders_a_card_not_a_chart(self):
+        """One measurement is not a time series: state it, don't plot it."""
         svg = sh.render(ONE, "light")
-        self.assertIn("<circle", svg)
         self.assertIn("</svg>", svg)
+        self.assertIn(">1</text>", svg)
+        self.assertIn(">star</text>", svg)
+        self.assertIn("Recording since Jul 25, 2026", svg)
+        for chart_only in ("<polyline", "<circle", "<line "):
+            self.assertNotIn(chart_only, svg)
+
+    def test_zero_stars_does_not_plot_a_dot_on_the_floor(self):
+        svg = sh.render({"repo": "o/r", "points": [
+            {"date": "2026-07-25", "stars": 0, "src": "snapshot"}]}, "light")
+        self.assertIn(">0</text>", svg)
+        self.assertIn(">stars</text>", svg)
+        self.assertNotIn("<circle", svg)
+
+    def test_card_becomes_a_chart_at_the_second_point(self):
+        two = {"repo": "o/r", "points": [
+            {"date": "2026-07-24", "stars": 1, "src": "snapshot"},
+            {"date": "2026-07-25", "stars": 2, "src": "snapshot"}]}
+        self.assertIn("<polyline", sh.render(two, "light"))
+
+    def test_card_is_shorter_than_the_chart(self):
+        """The whole point: don't spend 400px saying there is no data yet."""
+        self.assertIn('height="150"', sh.render(ONE, "light"))
+        self.assertIn('height="400"', sh.render(MIXED, "light"))
+
+    def test_card_says_when_the_number_is_reconstructed(self):
+        """A backfilled count must never read as a measurement."""
+        card = sh.render({"repo": "o/r", "points": [
+            {"date": "2019-01-01", "stars": 12, "src": "backfill"}]}, "light")
+        self.assertIn("Reconstructed", card)
+        self.assertNotIn("Recording since", card)
+
+    def test_card_follows_the_theme_rules(self):
+        light, dark = sh.render(ONE, "light"), sh.render(ONE, "dark")
+        self.assertIn('<rect width="800" height="150" fill="#ffffff"', light)
+        self.assertNotIn('<rect width="800"', dark)
+        self.assertEqual(sh.render(ONE, "light"), light)  # deterministic
 
     def test_backfill_segment_is_dashed_and_snapshot_is_not(self):
         svg = sh.render(MIXED, "light")

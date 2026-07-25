@@ -24,6 +24,7 @@ MAX_RESPONSE_BYTES = 1_000_000
 API_ROOT = "https://api.github.com"
 
 WIDTH, HEIGHT = 800, 400
+CARD_HEIGHT = 150
 PAD_L, PAD_R, PAD_T, PAD_B = 60, 20, 30, 50
 PLOT_W = WIDTH - PAD_L - PAD_R
 PLOT_H = HEIGHT - PAD_T - PAD_B
@@ -118,6 +119,52 @@ def alt_text(state):
             f"star{'' if latest['stars'] == 1 else 's'} as of {latest['date']}")
 
 
+def _open(state, colors, slug, height):
+    out = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {height}" '
+        f'width="{WIDTH}" height="{height}" role="img" aria-label="{alt_text(state)}">',
+        f"<title>{alt_text(state)}</title>",
+        f"<desc>Cumulative GitHub stars for {slug} over time.</desc>",
+    ]
+    if colors["bg"]:
+        out.append(f'<rect width="{WIDTH}" height="{height}" fill="{colors["bg"]}"/>')
+    return out
+
+
+def _close(out, colors, slug, height, note=None):
+    out.append(f'<rect x="{PAD_L}" y="10" width="10" height="10" fill="{LINE_COLOR}"/>')
+    out.append(f'<text x="{PAD_L + 16}" y="19" font-family="{FONT}" font-size="13" '
+               f'fill="{colors["fg"]}">{f"{slug} — {note}" if note else slug}</text>')
+    out.append(f'<text x="{WIDTH - PAD_R}" y="{height - 10}" text-anchor="end" '
+               f'font-family="{FONT}" font-size="11" '
+               f'fill="{colors["muted"]}">{ATTRIBUTION}</text>')
+    out.append("</svg>")
+    return "\n".join(out) + "\n"
+
+
+def _card(state, colors, slug):
+    """Fewer than two points is not a time series. State the number instead of
+    drawing a lone dot in the corner of an empty grid."""
+    latest = state["points"][-1]
+    count = latest["stars"]
+    out = _open(state, colors, slug, CARD_HEIGHT)
+    out.append(f'<text x="{PAD_L}" y="88" font-family="{FONT}" font-size="46" '
+               f'font-weight="600" fill="{colors["fg"]}">{count:,}</text>')
+    # 46px digits run about 28px wide; nudge the unit clear of the last one.
+    out.append(f'<text x="{PAD_L + 28 * len(f"{count:,}") + 10}" y="88" '
+               f'font-family="{FONT}" font-size="18" fill="{colors["muted"]}">'
+               f'{"star" if count == 1 else "stars"}</text>')
+    since = date.fromisoformat(state["points"][0]["date"])
+    # A reconstructed count must never read as a measurement.
+    lead = ("Reconstructed from GitHub timestamps as of"
+            if latest["src"] == "backfill" else "Recording since")
+    out.append(f'<text x="{PAD_L}" y="115" font-family="{FONT}" font-size="13" '
+               f'fill="{colors["muted"]}">{lead} '
+               f'{since.strftime("%b")} {since.day}, {since.year} — the chart '
+               f'appears once there is history to draw.</text>')
+    return _close(out, colors, slug, CARD_HEIGHT)
+
+
 def _label_dates(points):
     """About six evenly spaced x labels; year shown only on long ranges."""
     span_days = (date.fromisoformat(points[-1]["date"]).toordinal()
@@ -142,6 +189,9 @@ def render(state, theme):
         raise ValueError("cannot render an empty history")
 
     slug = validate_slug(state["repo"])
+    if len(points) < 2:
+        return _card(state, colors, slug)
+
     ordinals = [date.fromisoformat(p["date"]).toordinal() for p in points]
     first, last = ordinals[0], ordinals[-1]
     span = max(1, last - first)
@@ -167,16 +217,7 @@ def render(state, theme):
         dashed_idx, solid_idx = [], list(range(len(points)))
 
     latest = points[-1]
-    alt = alt_text(state)
-
-    out = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" '
-        f'width="{WIDTH}" height="{HEIGHT}" role="img" aria-label="{alt}">',
-        f"<title>{alt}</title>",
-        f"<desc>Cumulative GitHub stars for {slug} over time.</desc>",
-    ]
-    if colors["bg"]:
-        out.append(f'<rect width="{WIDTH}" height="{HEIGHT}" fill="{colors["bg"]}"/>')
+    out = _open(state, colors, slug, HEIGHT)
 
     value = 0
     while value <= top:
@@ -210,15 +251,8 @@ def render(state, theme):
     out.append(f'<circle cx="{sx(last)}" cy="{sy(latest["stars"])}" r="3.5" '
                f'fill="{LINE_COLOR}"/>')
 
-    out.append(f'<rect x="{PAD_L}" y="10" width="10" height="10" fill="{LINE_COLOR}"/>')
-    legend = f"{slug} — dashed is reconstructed" if backfill else slug
-    out.append(f'<text x="{PAD_L + 16}" y="19" font-family="{FONT}" font-size="13" '
-               f'fill="{colors["fg"]}">{legend}</text>')
-    out.append(f'<text x="{WIDTH - PAD_R}" y="{HEIGHT - 10}" text-anchor="end" '
-               f'font-family="{FONT}" font-size="11" '
-               f'fill="{colors["muted"]}">{ATTRIBUTION}</text>')
-    out.append("</svg>")
-    return "\n".join(out) + "\n"
+    return _close(out, colors, slug, HEIGHT,
+                  "dashed is reconstructed" if backfill else None)
 
 
 def render_all(state, data_dir=DATA_DIR):

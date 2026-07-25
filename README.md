@@ -42,6 +42,10 @@ forever.
 The snippet refuses to print until the first run has produced data, so you can't
 paste a block pointing at files that don't exist yet.
 
+On day one there's a single measurement, which is not a time series — so you get
+a short card with the count and the date recording started. The chart replaces it
+on the second run, when there are finally two points to draw a line between.
+
 Nothing to install, no dependencies, no build step. One file of Python 3.12
 standard library.
 
