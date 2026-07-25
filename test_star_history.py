@@ -175,5 +175,35 @@ class TestUpdate(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(d, "dark.svg")))
 
 
+class TestBackfill(unittest.TestCase):
+    def test_builds_cumulative_points_from_timestamps(self):
+        stamps = ["2019-01-01T00:00:00Z", "2019-01-01T12:00:00Z",
+                  "2019-03-02T00:00:00Z"]
+        self.assertEqual(sh.cumulative_points(stamps), [
+            {"date": "2019-01-01", "stars": 2, "src": "backfill"},
+            {"date": "2019-03-02", "stars": 3, "src": "backfill"},
+        ])
+
+    def test_empty_edges_with_nonzero_count_is_fatal(self):
+        """The 2026-06-30 restriction returns [] rather than an error."""
+        with self.assertRaises(SystemExit):
+            sh.check_backfill_complete(collected=0, reported=54173)
+
+    def test_small_drift_is_tolerated(self):
+        """Stars change during a multi-minute paginated run."""
+        sh.check_backfill_complete(collected=999, reported=1000)
+
+    def test_merge_never_overwrites_a_measured_point(self):
+        state = {"repo": "o/r", "points": [
+            {"date": "2026-07-25", "stars": 3011, "src": "snapshot"}]}
+        sh.merge_backfill(state, [
+            {"date": "2019-01-01", "stars": 1, "src": "backfill"},
+            {"date": "2026-07-25", "stars": 9, "src": "backfill"},
+        ])
+        dates = [(p["date"], p["src"]) for p in state["points"]]
+        self.assertEqual(dates, [("2019-01-01", "backfill"),
+                                 ("2026-07-25", "snapshot")])
+
+
 if __name__ == "__main__":
     unittest.main()

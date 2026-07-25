@@ -242,6 +242,103 @@ def fetch_star_count(repo, token=None):
     return int(payload["stargazers_count"])
 
 
+GRAPHQL_URL = "https://api.github.com/graphql"
+STARGAZER_QUERY = """
+query($owner:String!, $name:String!, $cursor:String) {
+  repository(owner:$owner, name:$name) {
+    stargazerCount
+    stargazers(first:100, after:$cursor,
+               orderBy:{field:STARRED_AT, direction:ASC}) {
+      pageInfo { hasNextPage endCursor }
+      edges { starredAt }
+    }
+  }
+}
+"""
+
+
+def cumulative_points(timestamps):
+    """One point per day on which the star count changed."""
+    running = 0
+    per_day = {}
+    for stamp in sorted(timestamps):
+        running += 1
+        per_day[stamp[:10]] = running
+    return [{"date": day, "stars": total, "src": "backfill"}
+            for day, total in sorted(per_day.items())]
+
+
+def check_backfill_complete(collected, reported):
+    if reported > 0 and collected == 0:
+        sys.exit(
+            "GitHub returned no star timestamps. Since 2026-06-30 these are "
+            "restricted to repository admins and collaborators, and the API "
+            "returns an empty list rather than an error. Backfill only works "
+            "on repositories you own or help maintain; snapshot-only mode "
+            "works everywhere."
+        )
+    if reported and abs(collected - reported) > max(5, reported * 0.01):
+        sys.exit(f"only {collected} of {reported} stars retrieved; "
+                 f"re-run backfill")
+
+
+def merge_backfill(state, points):
+    """Fill only dates the measured record does not already cover."""
+    measured = {p["date"] for p in state["points"] if p["src"] == "snapshot"}
+    earliest = min(measured) if measured else None
+    for point in points:
+        if point["date"] in measured:
+            continue
+        if earliest and point["date"] >= earliest:
+            continue
+        add_point(state, point["date"], point["stars"], src="backfill")
+
+
+def backfill_token():
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    try:
+        return subprocess.run(["gh", "auth", "token"], capture_output=True,
+                              text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        sys.exit("no credentials: set GITHUB_TOKEN or run 'gh auth login'")
+
+
+def fetch_star_timestamps(repo, token):
+    owner, name = repo.split("/")
+    cursor, stamps, reported = None, [], 0
+    while True:
+        payload = http_json(GRAPHQL_URL, token, data={
+            "query": STARGAZER_QUERY,
+            "variables": {"owner": owner, "name": name, "cursor": cursor}})
+        if "errors" in payload:
+            sys.exit(f"GraphQL error: {payload['errors']}")
+        node = payload["data"]["repository"]["stargazers"]
+        reported = payload["data"]["repository"]["stargazerCount"]
+        stamps.extend(edge["starredAt"] for edge in node["edges"])
+        print(f"  {len(stamps)}/{reported}", file=sys.stderr)
+        if not node["pageInfo"]["hasNextPage"]:
+            return stamps, reported
+        cursor = node["pageInfo"]["endCursor"]
+
+
+def cmd_backfill(args):
+    data_dir = args.data_dir or DATA_DIR
+    path = os.path.join(data_dir, "history.json")
+    repo = resolve_repo(args.repo)
+    state = load_history(path)
+    if any(p["src"] == "backfill" for p in state["points"]) and not args.force:
+        sys.exit("history already contains backfilled points; pass --force")
+    stamps, reported = fetch_star_timestamps(repo, backfill_token())
+    check_backfill_complete(len(stamps), reported)
+    state["repo"] = repo
+    merge_backfill(state, cumulative_points(stamps))
+    save_history(state, path)
+    render_all(state, data_dir)
+    print(f"{repo}: backfilled {len(stamps)} stars")
+
+
 def today_utc():
     return datetime.now(timezone.utc).date().isoformat()
 
@@ -291,8 +388,11 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("update", help="record today's count and render")
     sub.add_parser("snippet", help="print the README block")
+    backfill = sub.add_parser("backfill", help="one-time local history rebuild")
+    backfill.add_argument("--force", action="store_true")
     args = parser.parse_args(argv)
-    {"update": cmd_update, "snippet": cmd_snippet}[args.command](args)
+    {"update": cmd_update, "snippet": cmd_snippet,
+     "backfill": cmd_backfill}[args.command](args)
 
 
 if __name__ == "__main__":
