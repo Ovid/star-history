@@ -6,6 +6,10 @@ with no hosted service and no AI in the loop.
 Copy two files, commit, paste one snippet. A daily GitHub Action records your
 star count and redraws two SVGs — one for light mode, one for dark.
 
+If you find this useful, please star this repository. It helps me know that
+the tool is worth maintaining, and it shows that the workflow is behaving
+correctly..
+
 ## What you get
 
 <picture>
