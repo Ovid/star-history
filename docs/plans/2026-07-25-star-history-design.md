@@ -123,9 +123,20 @@ help. Popular repos — the actual audience — gain stars most days and would g
 a daily commit regardless. The saving was illusory in both directions.
 
 The cost is one bot commit per day. Stated plainly in the README rather than
-engineered around. (Whether a bot commit resets the 60-day timer is
-undocumented; if GitHub disables the workflow, re-enable it in the Actions
-tab.)
+engineered around.
+
+**Correction, researched 2026-07-25.** An earlier draft of this section said it
+was undocumented whether a bot commit resets the 60-day timer. It is better
+established than that: **only new commits** reset it — creating tags, opening
+issues, and merging pull requests do not — which is why the community's
+keepalive actions all work by generating a periodic commit. This workflow
+already commits daily, so it keeps itself alive as a side effect of the
+decision above. That is a second, unplanned reason the write-every-run design
+beats write-on-change.
+
+The protection only holds while the workflow is running. If it stops for any
+other reason — branch protection, disabled Actions, a failing push — the
+60-day clock starts and it will not self-heal; re-enable it in the Actions tab.
 
 ## Rendering
 

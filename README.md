@@ -153,6 +153,46 @@ the feature outright.
 If you have a protected default branch or you don't want the daily commit, say
 so in an issue — that's the trigger to build it, and it's written down as such.
 
+## Operating it
+
+**Will you be billed?** On a public repository, no — GitHub Actions is free on
+standard runners, and `ubuntu-latest` is one. On a private repository the job is
+a checkout, one API call, and a commit: budget a minute per run, so about 30
+minutes a month against the 2,000 included on Free or 3,000 on Pro and Team.
+Nothing is uploaded as an artifact, so there's no Actions storage bill — the
+line item that usually does the surprising.
+
+**What it won't do:** pushes made with `GITHUB_TOKEN` don't start new workflow
+runs, so the daily commit can't trigger your CI, your deploy, or itself. The
+commits are authored by `github-actions[bot]`, so they don't land on your
+contribution graph. What it *will* do is bump your repository's update time
+every day, so it always sorts as recently-updated, and add roughly 7–8 KB of
+changed text per day — low single-digit megabytes a year after compression.
+
+**How it fails.** Four of the five ways are loud:
+
+| | Noise | Recovery |
+|---|---|---|
+| A scheduled run is delayed or dropped | **Silent** | Automatic next day |
+| Branch protection rejects the push | Failed job | Needs a decision — see above |
+| A human push lands mid-job | Failed job | Automatic next day |
+| Actions disabled or restricted org-wide | Failed job | Needs an admin |
+| GitHub restricts `stargazers_count` | Failed job | None — see below |
+
+The silent one is worth understanding. GitHub treats `schedule` as best-effort
+and may delay or skip runs under load, and a missing day is drawn as a straight
+line between the points either side of it — indistinguishable from measured
+data. The `17 3 * * *` schedule avoids the top-of-hour rush, which helps and
+guarantees nothing.
+
+**The 60-day rule takes care of itself, until it doesn't.** GitHub disables
+scheduled workflows in public repositories after 60 days without repository
+activity, and only new commits count as activity — not tags, issues, or merged
+pull requests. Since this workflow commits daily, it keeps itself enabled as a
+side effect. But that only holds while it's running: if it stops for any of the
+reasons above, the clock starts, and it won't restart itself. Re-enable it in
+the Actions tab.
+
 ## Why this exists now
 
 On 2026-06-30 GitHub restricted stargazer *timestamps* to a repository's admins
