@@ -287,11 +287,12 @@ def nice_step(maximum, target_ticks=5):
     """Smallest 1/2/5 x 10^k step giving about `target_ticks` gridlines."""
     raw = max(maximum, 1) / target_ticks
     magnitude = 10 ** math.floor(math.log10(raw))
-    for multiple in (1, 2, 5, 10):
+    for multiple in (1, 2, 5):
         step = multiple * magnitude
+        # Ticks are integers; sub-decade repos truncate to 0 and floor to 1.
         if step >= raw:
             return max(1, int(step))
-    return max(1, int(magnitude * 10))
+    return max(1, int(10 * magnitude))
 ```
 
 **Step 4: Run to verify pass**
