@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400" role="img" aria-label="Star history for Ovid/star-history: 1 star as of 2026-07-25">
+<title>Star history for Ovid/star-history: 1 star as of 2026-07-25</title>
+<desc>Cumulative GitHub stars for Ovid/star-history over time.</desc>
+<rect width="800" height="400" fill="#ffffff"/>
+<line x1="60" y1="350" x2="780" y2="350" stroke="#d0d7de" stroke-width="1"/>
+<text x="52" y="354" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#57606a">0</text>
+<line x1="60" y1="30" x2="780" y2="30" stroke="#d0d7de" stroke-width="1"/>
+<text x="52" y="34" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#57606a">1</text>
+<text x="60" y="370" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#57606a">Jul 25</text>
+<circle cx="60" cy="30" r="3.5" fill="#e5533d"/>
+<rect x="60" y="10" width="10" height="10" fill="#e5533d"/>
+<text x="76" y="19" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" fill="#24292f">Ovid/star-history</text>
+<text x="780" y="390" text-anchor="end" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#57606a">github.com/Ovid/star-history</text>
+</svg>
