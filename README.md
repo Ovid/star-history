@@ -60,14 +60,15 @@ a card with the count and the date recording started, rather than a lone dot in
 an empty grid:
 
 <picture>
-  <source media="(prefers-color-scheme: dark)"  srcset=".github/star-history/dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset=".github/star-history/light.svg">
-  <img alt="Star history for Ovid/star-history: 1 star as of 2026-07-25" src=".github/star-history/light.svg" width="800">
+  <source media="(prefers-color-scheme: dark)"  srcset="docs/example-card-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/example-card-light.svg">
+  <img alt="Star history for Ovid/star-history: 1 star as of 2026-07-25" src="docs/example-card-light.svg" width="800">
 </picture>
 
-The chart replaces it on the second run, when there are finally two points to
-draw a line between. (That card is this repository's own live output, committed
-by the same workflow you just installed.)
+That's this repository's genuine first day, frozen so it keeps illustrating the
+point. The chart takes over on the second *day* — two runs on one UTC date
+dedupe to a single point, so a manual run plus the nightly cron still leaves you
+with a card until tomorrow.
 
 ## Optional: backfill your existing history
 
@@ -192,6 +193,24 @@ pull requests. Since this workflow commits daily, it keeps itself enabled as a
 side effect. But that only holds while it's running: if it stops for any of the
 reasons above, the clock starts, and it won't restart itself. Re-enable it in
 the Actions tab.
+
+## This repository's own chart
+
+Not an illustration — the live files, rewritten by the same workflow you'd
+install, committed daily:
+
+<a href="https://github.com/Ovid/star-history">
+  <picture>
+    <source media="(prefers-color-scheme: dark)"  srcset=".github/star-history/dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset=".github/star-history/light.svg">
+    <img alt="Star history for Ovid/star-history — this repository's own chart, redrawn on every daily run" src=".github/star-history/light.svg" width="800">
+  </picture>
+</a>
+
+The alt text here deliberately carries no number, because this block is written
+by hand and the image behind it changes every day. The one `snippet` prints for
+you *does* include the count and date — it's regenerated whenever you re-run it,
+so it can afford to be specific.
 
 ## Why this exists now
 
