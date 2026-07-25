@@ -155,6 +155,18 @@ class TestFetch(unittest.TestCase):
                                         return_value={"stargazers_count": 42}):
             self.assertEqual(sh.fetch_star_count("o/r"), 42)
 
+    def test_untokened_404_names_the_private_repo_case(self):
+        """A private repo 404s exactly like a missing one; say so."""
+        import urllib.error
+        error = urllib.error.HTTPError("u", 404, "Not Found", {}, None)
+        with unittest.mock.patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(SystemExit) as caught:
+                sh.http_json("https://api.github.com/repos/o/r")
+            self.assertIn("GITHUB_TOKEN", str(caught.exception))
+            with self.assertRaises(SystemExit) as with_token:
+                sh.http_json("https://api.github.com/repos/o/r", token="t")
+            self.assertNotIn("GITHUB_TOKEN", str(with_token.exception))
+
     def test_missing_field_raises_rather_than_recording_garbage(self):
         with unittest.mock.patch.object(sh, "http_json", return_value={}):
             with self.assertRaises(SystemExit):
@@ -166,6 +178,11 @@ class TestSnippet(unittest.TestCase):
         block = sh.snippet_block(MIXED)
         self.assertIn('alt="Star history for Ovid/star-history: 3,011 stars '
                       'as of 2026-07-25"', block)
+
+    def test_a_single_star_is_not_described_as_1_stars(self):
+        self.assertIn('alt="Star history for Ovid/star-history: 1 star '
+                      'as of 2026-07-25"', sh.snippet_block(ONE))
+        self.assertIn("1 star as of", sh.render(ONE, "light"))
 
     def test_links_to_the_project(self):
         self.assertIn('<a href="https://github.com/Ovid/star-history">',

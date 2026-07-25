@@ -111,6 +111,13 @@ def resolve_repo(explicit=None):
     return validate_slug(slug)
 
 
+def alt_text(state):
+    """The accessibility surface: an SVG in an <img> exposes nothing else."""
+    latest = state["points"][-1]
+    return (f"Star history for {state['repo']}: {latest['stars']:,} "
+            f"star{'' if latest['stars'] == 1 else 's'} as of {latest['date']}")
+
+
 def _label_dates(points):
     """About six evenly spaced x labels; year shown only on long ranges."""
     span_days = (date.fromisoformat(points[-1]["date"]).toordinal()
@@ -160,8 +167,7 @@ def render(state, theme):
         dashed_idx, solid_idx = [], list(range(len(points)))
 
     latest = points[-1]
-    alt = (f"Star history for {slug}: {latest['stars']:,} stars "
-           f"as of {latest['date']}")
+    alt = alt_text(state)
 
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" '
@@ -236,7 +242,10 @@ def http_json(url, token=None, data=None, accept="application/vnd.github+json"):
         with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
             return json.loads(response.read(MAX_RESPONSE_BYTES))
     except urllib.error.HTTPError as error:
-        sys.exit(f"GitHub returned HTTP {error.code} for {url}")
+        # A private repo is indistinguishable from a missing one without a token.
+        hint = ("; a private repository needs GITHUB_TOKEN"
+                if error.code == 404 and not token else "")
+        sys.exit(f"GitHub returned HTTP {error.code} for {url}{hint}")
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
         sys.exit(f"could not reach GitHub: {error}")
 
@@ -350,9 +359,7 @@ def today_utc():
 
 
 def snippet_block(state, data_dir=DATA_DIR):
-    latest = state["points"][-1]
-    alt = (f"Star history for {state['repo']}: {latest['stars']:,} stars "
-           f"as of {latest['date']}")
+    alt = alt_text(state)
     return (
         f'<a href="{PROJECT_URL}">\n'
         f"  <picture>\n"
