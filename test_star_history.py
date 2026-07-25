@@ -1,4 +1,4 @@
-import json, os, tempfile, unittest
+import argparse, json, os, tempfile, unittest
 import unittest.mock
 import star_history as sh
 
@@ -144,6 +144,35 @@ class TestFetch(unittest.TestCase):
         with unittest.mock.patch.object(sh, "http_json", return_value={}):
             with self.assertRaises(SystemExit):
                 sh.fetch_star_count("o/r")
+
+
+class TestSnippet(unittest.TestCase):
+    def test_includes_count_and_date_in_alt_text(self):
+        block = sh.snippet_block(MIXED)
+        self.assertIn('alt="Star history for Ovid/star-history: 3,011 stars '
+                      'as of 2026-07-25"', block)
+
+    def test_links_to_the_project(self):
+        self.assertIn('<a href="https://github.com/Ovid/star-history">',
+                      sh.snippet_block(MIXED))
+
+    def test_references_both_themes(self):
+        block = sh.snippet_block(MIXED)
+        self.assertIn(".github/star-history/dark.svg", block)
+        self.assertIn(".github/star-history/light.svg", block)
+
+
+class TestUpdate(unittest.TestCase):
+    def test_records_todays_count_and_writes_both_svgs(self):
+        with tempfile.TemporaryDirectory() as d:
+            with unittest.mock.patch.object(sh, "fetch_star_count", return_value=7), \
+                 unittest.mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": "o/r"}):
+                sh.cmd_update(argparse.Namespace(repo=None, data_dir=d))
+            state = sh.load_history(os.path.join(d, "history.json"))
+            self.assertEqual(state["points"][-1]["stars"], 7)
+            self.assertEqual(state["repo"], "o/r")
+            self.assertTrue(os.path.exists(os.path.join(d, "light.svg")))
+            self.assertTrue(os.path.exists(os.path.join(d, "dark.svg")))
 
 
 if __name__ == "__main__":

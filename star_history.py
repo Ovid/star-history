@@ -3,6 +3,7 @@
 
 Standard library only. See docs/plans/2026-07-25-star-history-design.md.
 """
+import argparse
 import json
 import math
 import os
@@ -11,9 +12,10 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-from datetime import date
+from datetime import date, datetime, timezone
 
 DATA_DIR = ".github/star-history"
+PROJECT_URL = "https://github.com/Ovid/star-history"
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
 SLUG_RE = re.compile(r"[A-Za-z0-9._-]+/[A-Za-z0-9._-]+")
 
@@ -238,3 +240,60 @@ def fetch_star_count(repo, token=None):
     if "stargazers_count" not in payload:
         sys.exit(f"no stargazers_count in the API response for {repo}")
     return int(payload["stargazers_count"])
+
+
+def today_utc():
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def snippet_block(state, data_dir=DATA_DIR):
+    latest = state["points"][-1]
+    alt = (f"Star history for {state['repo']}: {latest['stars']:,} stars "
+           f"as of {latest['date']}")
+    return (
+        f'<a href="{PROJECT_URL}">\n'
+        f"  <picture>\n"
+        f'    <source media="(prefers-color-scheme: dark)"  srcset="{data_dir}/dark.svg">\n'
+        f'    <source media="(prefers-color-scheme: light)" srcset="{data_dir}/light.svg">\n'
+        f'    <img alt="{alt}" src="{data_dir}/light.svg" width="800">\n'
+        f"  </picture>\n"
+        f"</a>\n"
+    )
+
+
+def cmd_update(args):
+    data_dir = args.data_dir or DATA_DIR
+    path = os.path.join(data_dir, "history.json")
+    repo = resolve_repo(args.repo)
+    state = load_history(path)
+    if state.get("repo") and state["repo"] != repo:
+        print(f"note: repository renamed {state['repo']} -> {repo}", file=sys.stderr)
+    state["repo"] = repo
+    count = fetch_star_count(repo, os.environ.get("GITHUB_TOKEN"))
+    add_point(state, today_utc(), count)
+    save_history(state, path)
+    render_all(state, data_dir)
+    print(f"{repo}: {count} stars, {len(state['points'])} points")
+
+
+def cmd_snippet(args):
+    data_dir = args.data_dir or DATA_DIR
+    state = load_history(os.path.join(data_dir, "history.json"))
+    if not state["points"]:
+        sys.exit("no history yet — run the workflow once, then try again")
+    print(snippet_block(state, data_dir))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo", help="OWNER/NAME (default: env or git remote)")
+    parser.add_argument("--data-dir", default=DATA_DIR)
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("update", help="record today's count and render")
+    sub.add_parser("snippet", help="print the README block")
+    args = parser.parse_args(argv)
+    {"update": cmd_update, "snippet": cmd_snippet}[args.command](args)
+
+
+if __name__ == "__main__":
+    main()
