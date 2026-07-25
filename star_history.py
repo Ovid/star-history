@@ -11,7 +11,7 @@ import sys
 
 DATA_DIR = ".github/star-history"
 HISTORY_PATH = os.path.join(DATA_DIR, "history.json")
-SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+SLUG_RE = re.compile(r"[A-Za-z0-9._-]+/[A-Za-z0-9._-]+")
 
 
 def load_history(path=HISTORY_PATH):
@@ -46,8 +46,8 @@ def add_point(state, day, stars, src="snapshot"):
 
 
 def validate_slug(slug):
-    """The one trust boundary: the slug is interpolated straight into the SVG."""
-    if not SLUG_RE.match(slug or ""):
+    """The one trust boundary: the slug goes straight into SVG text and API URLs."""
+    if not SLUG_RE.fullmatch(slug or ""):
         sys.exit(f"not a valid OWNER/NAME repository slug: {slug!r}")
     return slug
 

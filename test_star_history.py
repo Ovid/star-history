@@ -62,7 +62,7 @@ class TestResolveRepo(unittest.TestCase):
                          "Ovid/star-history")
 
     def test_rejects_slug_that_could_break_out_of_svg(self):
-        for bad in ('a"/b', "a/b<script>", "noslash", "a/b/c", ""):
+        for bad in ('a"/b', "a/b<script>", "noslash", "a/b/c", "", "a/b\n"):
             with self.assertRaises(SystemExit):
                 sh.validate_slug(bad)
 

@@ -184,7 +184,7 @@ class TestResolveRepo(unittest.TestCase):
                          "Ovid/star-history")
 
     def test_rejects_slug_that_could_break_out_of_svg(self):
-        for bad in ('a"/b', "a/b<script>", "noslash", "a/b/c", ""):
+        for bad in ('a"/b', "a/b<script>", "noslash", "a/b/c", "", "a/b\n"):
             with self.assertRaises(SystemExit):
                 sh.validate_slug(bad)
 ```
@@ -203,11 +203,12 @@ import re
 import subprocess
 import sys
 
-SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+SLUG_RE = re.compile(r"[A-Za-z0-9._-]+/[A-Za-z0-9._-]+")
 
 
 def validate_slug(slug):
-    if not SLUG_RE.match(slug or ""):
+    """The one trust boundary: the slug goes straight into SVG text and API URLs."""
+    if not SLUG_RE.fullmatch(slug or ""):
         sys.exit(f"not a valid OWNER/NAME repository slug: {slug!r}")
     return slug
 
