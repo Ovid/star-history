@@ -67,5 +67,16 @@ class TestResolveRepo(unittest.TestCase):
                 sh.validate_slug(bad)
 
 
+class TestNiceStep(unittest.TestCase):
+    def test_picks_round_steps(self):
+        self.assertEqual(sh.nice_step(9), 2)        # ticks 0,2,4,6,8,10
+        self.assertEqual(sh.nice_step(41), 10)      # ticks 0..50
+        self.assertEqual(sh.nice_step(3011), 1000)  # ticks 0..4000
+
+    def test_never_returns_zero(self):
+        self.assertEqual(sh.nice_step(0), 1)
+        self.assertEqual(sh.nice_step(1), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

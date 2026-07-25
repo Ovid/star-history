@@ -4,6 +4,7 @@
 Standard library only. See docs/plans/2026-07-25-star-history-design.md.
 """
 import json
+import math
 import os
 import re
 import subprocess
@@ -43,6 +44,17 @@ def add_point(state, day, stars, src="snapshot"):
     points.append({"date": day, "stars": stars, "src": src})
     points.sort(key=lambda p: p["date"])
     state["points"] = points
+
+
+def nice_step(maximum, target_ticks=5):
+    """Smallest 1/2/5 x 10^k step giving about `target_ticks` gridlines."""
+    raw = max(maximum, 1) / target_ticks
+    magnitude = 10 ** math.floor(math.log10(raw))
+    for multiple in (1, 2, 5, 10):
+        step = multiple * magnitude
+        if step >= raw:
+            return max(1, int(step))
+    return max(1, int(magnitude * 10))
 
 
 def validate_slug(slug):
