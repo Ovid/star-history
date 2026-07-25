@@ -131,12 +131,15 @@ def save_history(state, path=HISTORY_PATH):
 
 
 def add_point(state, day, stars, src="snapshot"):
-    """Insert a point for `day`, replacing any existing point for that date."""
+    """Insert a point for ISO date string `day`, replacing any point for that date.
+
+    Mutates `state` in place. Sorting is lexicographic, which matches
+    chronological order only because the dates are zero-padded ISO.
+    """
     points = [p for p in state["points"] if p["date"] != day]
     points.append({"date": day, "stars": stars, "src": src})
     points.sort(key=lambda p: p["date"])
     state["points"] = points
-    return state
 ```
 
 **Step 4: Run to verify pass**
@@ -830,7 +833,6 @@ def merge_backfill(state, points):
         if earliest and point["date"] >= earliest:
             continue
         add_point(state, point["date"], point["stars"], src="backfill")
-    return state
 
 
 def backfill_token():
