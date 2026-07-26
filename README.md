@@ -38,6 +38,11 @@ Two files, and only those two:
 ```
 star_history.py                        ← copy this
 .github/workflows/star-history.yml     ← and this, at exactly this path
+```
+
+**DO NOT COPY THE FOLLOWING**:
+
+```
 .github/star-history/                  ← don't copy: the tool creates it
     history.json                          your record of measurements
     light.svg  dark.svg                   redrawn on every run
