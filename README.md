@@ -236,6 +236,10 @@ This one cross-checks the number of timestamps it received against
 The count itself is still public, so the daily snapshot works on any repository,
 forever.
 
+# Credits
+
+Thanks to https://github.com/fleetfootmike for the idea!
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Copy the two files into your own repo and go.
