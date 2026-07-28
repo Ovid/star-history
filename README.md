@@ -191,6 +191,17 @@ line between the points either side of it — indistinguishable from measured
 data. The `17 3 * * *` schedule avoids the top-of-hour rush, which helps and
 guarantees nothing.
 
+**If you installed this before 2026-07-28, re-copy the workflow file.** Two
+reasons, and only one of them might apply to you. If you push tags, you're
+hitting a bug: earlier versions ran on tag pushes as well as branch pushes, and
+a tag checkout is a detached HEAD, so the job committed and then died on `git
+push` with `fatal: You are not currently on a branch.` and exit 128. Nothing is
+lost — the next scheduled run records the point — but each tag leaves a failed
+job behind. If you never push tags, you never saw this and never will. The
+reason that applies either way is smaller: the workflow now pins
+`actions/checkout@v5`, which runs on Node 24 rather than the deprecated Node 20.
+`star_history.py` is unchanged; only the workflow file needs replacing.
+
 **The 60-day rule takes care of itself, until it doesn't.** GitHub disables
 scheduled workflows in public repositories after 60 days without repository
 activity, and only new commits count as activity — not tags, issues, or merged
