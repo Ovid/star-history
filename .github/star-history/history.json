@@ -574,6 +574,11 @@
    "date": "2026-11-16",
    "src": "snapshot",
    "stars": 3
+  },
+  {
+   "date": "2026-11-17",
+   "src": "snapshot",
+   "stars": 3
   }
  ],
  "repo": "Ovid/star-history"
